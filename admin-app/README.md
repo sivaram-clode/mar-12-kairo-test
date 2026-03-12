@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# QR Platform Admin Dashboard
+
+A Next.js 14 admin dashboard for managing the QR Platform. Built with TypeScript, Tailwind CSS, and Recharts.
+
+## Features
+
+- **Login** (`/login`) — Admin-only login with JWT authentication
+- **Dashboard** (`/dashboard`) — Platform overview with stat cards and daily scan volume chart
+- **Users** (`/users`) — User management table with Activate/Deactivate controls
+- **QR Codes** (`/qr-codes`) — View all QR codes across the platform with search
+
+## Tech Stack
+
+- [Next.js 14](https://nextjs.org/) (App Router)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Recharts](https://recharts.org/) (charts)
+- [Jest](https://jestjs.io/) + [React Testing Library](https://testing-library.com/react)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Backend API running at `http://localhost:5000` (or configured via env)
+
+### Installation
+
+```bash
+cd admin-app
+npm install
+```
+
+### Environment Variables
+
+Copy the example env file and configure it:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Description | Default |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | Backend API base URL | `http://localhost:5000` |
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Opens on [http://localhost:3001](http://localhost:3001).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Production Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+### Testing
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm test
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Run with coverage:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm test -- --coverage
+```
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+admin-app/
+├── app/
+│   ├── layout.tsx          # Root layout
+│   ├── page.tsx            # Redirect to /dashboard or /login
+│   ├── login/
+│   │   └── page.tsx        # Admin login form
+│   ├── dashboard/
+│   │   └── page.tsx        # Platform stats + daily scan chart
+│   ├── users/
+│   │   └── page.tsx        # Users management table
+│   └── qr-codes/
+│       └── page.tsx        # QR codes table
+├── components/
+│   ├── AuthGuard.tsx       # Route protection component
+│   └── Sidebar.tsx         # Navigation sidebar
+├── lib/
+│   └── auth.ts             # JWT auth utilities
+├── __tests__/
+│   ├── login.test.tsx
+│   ├── dashboard.test.tsx
+│   └── users.test.tsx
+├── jest.config.js
+├── jest.setup.js
+├── .env.example
+└── package.json
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## API Endpoints Used
+
+The admin dashboard communicates with these backend API endpoints:
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `POST /api/auth/login` | POST | Authenticate and receive JWT |
+| `GET /api/admin/stats` | GET | Platform statistics |
+| `GET /api/admin/scans/daily?days=30` | GET | Daily scan volume data |
+| `GET /api/admin/users` | GET | List all users |
+| `PATCH /api/admin/users/:id/toggle` | PATCH | Activate/deactivate a user |
+| `GET /api/admin/qr-codes` | GET | List all QR codes |
+
+All endpoints (except login) require `Authorization: Bearer <token>` header.
+
+## Authentication
+
+- JWT is stored in `localStorage` under the key `admin_token`
+- On login, the token payload is decoded to check `role === 'admin'`
+- Non-admin users are rejected at login
+- All protected pages redirect to `/login` if no valid admin token is found
