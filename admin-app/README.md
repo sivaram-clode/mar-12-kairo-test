@@ -1,124 +1,100 @@
-# QR Platform Admin Dashboard
+# QR Platform — Admin Dashboard
 
-A Next.js 14 admin dashboard for managing the QR Platform. Built with TypeScript, Tailwind CSS, and Recharts.
+Next.js 14 admin dashboard for the QR Platform. Runs on **port 3001** and connects to the Flask API at `http://localhost:5000`.
 
 ## Features
 
-- **Login** (`/login`) — Admin-only login with JWT authentication
-- **Dashboard** (`/dashboard`) — Platform overview with stat cards and daily scan volume chart
-- **Users** (`/users`) — User management table with Activate/Deactivate controls
-- **QR Codes** (`/qr-codes`) — View all QR codes across the platform with search
+- **Admin login** — JWT-based authentication with role validation
+- **Users table** — view all registered users, activate/deactivate accounts
+- **QR Codes table** — platform-wide view of all QR codes across every user
+- **Platform stats** — total users, total QR codes, total scans at a glance
+- **Daily scan volume chart** — recharts bar chart of scan activity over time
+- **Protected routes** — `AuthGuard` component redirects unauthenticated visitors
 
 ## Tech Stack
 
-- [Next.js 14](https://nextjs.org/) (App Router)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Recharts](https://recharts.org/) (charts)
-- [Jest](https://jestjs.io/) + [React Testing Library](https://testing-library.com/react)
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 14 (App Router) |
+| Styling | Tailwind CSS |
+| Charts | recharts |
+| Testing | Jest + React Testing Library |
+| API client | Native `fetch` with `Authorization: Bearer` headers |
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Backend API running at `http://localhost:5000` (or configured via env)
-
-### Installation
-
 ```bash
-cd admin-app
-npm install
-```
+# 1. Install dependencies
+NODE_ENV=development npm install
 
-### Environment Variables
-
-Copy the example env file and configure it:
-
-```bash
+# 2. Configure environment
 cp .env.example .env.local
-```
+# Edit .env.local if your Flask API runs on a different host/port
 
-| Variable | Description | Default |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Backend API base URL | `http://localhost:5000` |
-
-### Development
-
-```bash
+# 3. Start the dev server (port 3001)
 npm run dev
 ```
 
-Opens on [http://localhost:3001](http://localhost:3001).
+Open [http://localhost:3001](http://localhost:3001) — you'll be redirected to `/login`.
 
-### Production Build
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:5000` | Base URL of the Flask API |
+
+See `.env.example` for the full list.
+
+## Flask API Contract
+
+The dashboard expects these endpoints on the Flask API:
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Returns `{ access_token }` with an admin JWT |
+| `GET` | `/admin/users` | List all users |
+| `PATCH` | `/admin/users/:id/toggle` | Activate/deactivate a user |
+| `GET` | `/admin/qrcodes` | List all QR codes across users |
+| `GET` | `/admin/stats/scans` | `{ total_scans, daily: [{ date, scans }] }` |
+| `GET` | `/admin/stats` | `{ total_users, total_qr_codes, total_scans }` |
+
+JWT tokens must include a `role` claim equal to `"admin"`.
+
+## Running Tests
 
 ```bash
-npm run build
-npm run start
+NODE_ENV=test npx jest --watchAll=false
 ```
 
-### Testing
-
-```bash
-npm test
-```
-
-Run with coverage:
-
-```bash
-npm test -- --coverage
-```
+Tests cover: login form (renders, error state, submit), dashboard (stats display, chart, error state), and users page (table render, activate/deactivate interaction).
 
 ## Project Structure
 
 ```
 admin-app/
 ├── app/
-│   ├── layout.tsx          # Root layout
-│   ├── page.tsx            # Redirect to /dashboard or /login
-│   ├── login/
-│   │   └── page.tsx        # Admin login form
-│   ├── dashboard/
-│   │   └── page.tsx        # Platform stats + daily scan chart
-│   ├── users/
-│   │   └── page.tsx        # Users management table
-│   └── qr-codes/
-│       └── page.tsx        # QR codes table
+│   ├── login/page.tsx          # Admin login page
+│   ├── dashboard/              # Overview with scan chart
+│   ├── users/                  # Users management
+│   └── qr-codes/               # QR codes viewer
 ├── components/
-│   ├── AuthGuard.tsx       # Route protection component
-│   └── Sidebar.tsx         # Navigation sidebar
+│   ├── AuthGuard.tsx           # Redirect if not authenticated
+│   ├── Sidebar.tsx             # Navigation sidebar
+│   └── charts/
+│       └── DailyScanChart.tsx  # recharts daily scan bar chart
 ├── lib/
-│   └── auth.ts             # JWT auth utilities
-├── __tests__/
-│   ├── login.test.tsx
-│   ├── dashboard.test.tsx
-│   └── users.test.tsx
-├── jest.config.js
-├── jest.setup.js
+│   ├── api.ts                  # Flask API service layer
+│   └── auth.ts                 # Token helpers (get/set/decode)
+├── __tests__/                  # Jest + RTL test suites
 ├── .env.example
-└── package.json
+└── README.md
 ```
 
-## API Endpoints Used
+## Scripts
 
-The admin dashboard communicates with these backend API endpoints:
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `POST /api/auth/login` | POST | Authenticate and receive JWT |
-| `GET /api/admin/stats` | GET | Platform statistics |
-| `GET /api/admin/scans/daily?days=30` | GET | Daily scan volume data |
-| `GET /api/admin/users` | GET | List all users |
-| `PATCH /api/admin/users/:id/toggle` | PATCH | Activate/deactivate a user |
-| `GET /api/admin/qr-codes` | GET | List all QR codes |
-
-All endpoints (except login) require `Authorization: Bearer <token>` header.
-
-## Authentication
-
-- JWT is stored in `localStorage` under the key `admin_token`
-- On login, the token payload is decoded to check `role === 'admin'`
-- Non-admin users are rejected at login
-- All protected pages redirect to `/login` if no valid admin token is found
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server on port 3001 |
+| `npm run build` | Production build |
+| `npm run start` | Start production server on port 3001 |
+| `npm test` | Run Jest test suite |
