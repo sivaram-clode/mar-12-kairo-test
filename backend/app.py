@@ -16,7 +16,24 @@ def create_app(config_name: str = None) -> Flask:
     db.init_app(app)
     Migrate(app, db)
     JWTManager(app)
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    CORS(
+        app,
+        resources={r"/*": {"origins": "*"}},
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    )
+
+    @app.before_request
+    def handle_preflight():
+        from flask import request, make_response
+        if request.method == "OPTIONS":
+            res = make_response()
+            res.headers["Access-Control-Allow-Origin"] = "*"
+            res.headers["Access-Control-Allow-Methods"] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+            res.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            res.headers["Access-Control-Max-Age"] = "3600"
+            return res, 204
 
     # Blueprints
     from blueprints.auth import auth_bp
