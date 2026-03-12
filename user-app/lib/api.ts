@@ -40,6 +40,10 @@ export async function register(email: string, password: string, name: string) {
   });
 }
 
+export async function getMe() {
+  return apiFetch("/auth/me");
+}
+
 export async function getQRCodes() {
   return apiFetch("/qr");
 }
