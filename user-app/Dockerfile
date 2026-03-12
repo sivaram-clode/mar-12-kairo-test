@@ -7,15 +7,13 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=https://qr-backend-826a2a8.mar-12-13c4381.clode.space
 RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs && \
