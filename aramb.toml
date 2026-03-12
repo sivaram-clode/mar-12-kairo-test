@@ -1,0 +1,206 @@
+# aramb.toml — QR Code Platform Deployment Manifest
+# Application: mar-12 (ID: 13c43812-8669-4f0f-b805-f5b5b3c0845f)
+# Environment: production (ID: ba671758-b9a1-4608-92bf-2909b25ae4c9)
+# Generated: 2026-03-12
+
+[application]
+id   = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+slug = "mar-12-13c4381"
+name = "mar-12"
+
+[environment]
+id   = "ba671758-b9a1-4608-92bf-2909b25ae4c9"
+slug = "production-ba67175"
+name = "production"
+
+# ─────────────────────────────────────────────
+# Service: PostgreSQL Database
+# ─────────────────────────────────────────────
+[[services]]
+id          = "ec98a488-b8d1-4662-8112-f187b7d71186"
+slug        = "qr-database-ec98a48"
+name        = "qr-database"
+type        = "postgres"
+description = "PostgreSQL 15 database for the QR Code platform"
+
+[services.settings]
+image              = "postgres:15-alpine"
+cpu                = 0.02
+memory             = 0.05
+public_net         = false
+run_as_root        = true
+restart_policy     = "Always"
+deployment_timeout = 15
+
+  [[services.vars]]
+  key   = "POSTGRES_DB"
+  value = "mydb"
+
+  [[services.vars]]
+  key   = "POSTGRES_USER"
+  value = "postgres"
+
+  [[services.secrets]]
+  key   = "POSTGRES_PASSWORD"
+  value = "password"
+
+  [[services.settings.health_checks]]
+  port                  = 5432
+  initial_delay_seconds = 30
+  period_seconds        = 30
+
+  [[services.settings.regions]]
+  region   = "eu-west-2"
+  replicas = 1
+
+# ─────────────────────────────────────────────
+# Service: Flask Backend API
+# ─────────────────────────────────────────────
+[[services]]
+id          = "826a2a8a-ba7b-4b4f-a020-24bd45df20f6"
+slug        = "qr-backend-826a2a8"
+name        = "qr-backend"
+type        = "backend"
+description = "Flask REST API — QR code generation, auth (JWT), stats"
+
+# Build from: backend/
+# Runtime: gunicorn on port 8080
+# Dev port: 5000 (Flask default); production port: 8080 (gunicorn)
+[services.build]
+context    = "backend"
+dockerfile = "backend/Dockerfile"
+
+[services.settings]
+image              = "registry.clode.space/mar-12-13c4381/qr-backend-826a2a8:latest"
+cpu                = 0.05
+memory             = 0.1
+public_net         = true
+run_as_root        = false
+restart_policy     = "Always"
+deployment_timeout = 15
+
+  [[services.vars]]
+  key   = "PORT"
+  value = "8080"
+
+  [[services.vars]]
+  key   = "FLASK_ENV"
+  value = "production"
+
+  # DATABASE_URL references the internal hostname of the postgres service
+  # Format: postgresql://<user>:<pass>@<service-slug>:<port>/<db>
+  [[services.vars]]
+  key   = "DATABASE_URL"
+  value = "postgresql://postgres:password@qr-database-ec98a48:5432/mydb"
+
+  # ALLOWED_ORIGINS — set to deployed frontend URLs (updated after first deploy)
+  [[services.vars]]
+  key   = "ALLOWED_ORIGINS"
+  value = "https://qr-user-app-c7eacc3.mar-12-13c4381.clode.space,https://qr-admin-app-20b289c.mar-12-13c4381.clode.space"
+
+  [[services.secrets]]
+  key   = "JWT_SECRET_KEY"
+  value = "REPLACE_WITH_STRONG_SECRET"
+
+  [[services.settings.health_checks]]
+  path                  = "/health"
+  port                  = 8080
+  scheme                = "http"
+  initial_delay_seconds = 20
+  period_seconds        = 15
+
+  [[services.settings.regions]]
+  region   = "eu-west-2"
+  replicas = 1
+
+# ─────────────────────────────────────────────
+# Service: User Dashboard (Next.js)
+# ─────────────────────────────────────────────
+[[services]]
+id          = "c7eacc34-74ce-407b-997d-cbad6b2886f4"
+slug        = "qr-user-app-c7eacc3"
+name        = "qr-user-app"
+type        = "frontend"
+description = "Next.js user dashboard — QR code management & analytics"
+
+# Build from: user-app/
+# Dev port: 3000; production served via nginx on port 80
+[services.build]
+context    = "user-app"
+static_out = "user-app/.next"
+framework  = "nextjs"
+
+[services.settings]
+cpu                = 0.02
+memory             = 0.05
+public_net         = true
+run_as_root        = false
+restart_policy     = "Always"
+deployment_timeout = 15
+
+  [[services.vars]]
+  key   = "NODE_ENV"
+  value = "production"
+
+  # NEXT_PUBLIC_API_URL must be set to the deployed backend public URL
+  # before building — it is baked into the static output at build time
+  [[services.vars]]
+  key   = "NEXT_PUBLIC_API_URL"
+  value = "https://qr-backend-826a2a8.mar-12-13c4381.clode.space"
+
+  [[services.settings.health_checks]]
+  path                  = "/"
+  port                  = 80
+  scheme                = "http"
+  initial_delay_seconds = 15
+  period_seconds        = 10
+
+  [[services.settings.regions]]
+  region   = "eu-west-2"
+  replicas = 1
+
+# ─────────────────────────────────────────────
+# Service: Admin Dashboard (Next.js)
+# ─────────────────────────────────────────────
+[[services]]
+id          = "20b289c8-df4a-4e2f-87fa-e78a629e6796"
+slug        = "qr-admin-app-20b289c"
+name        = "qr-admin-app"
+type        = "frontend"
+description = "Next.js admin dashboard — user management & platform stats"
+
+# Build from: admin-app/
+# Dev port: 3001 (next dev -p 3001); production served via nginx on port 80
+[services.build]
+context    = "admin-app"
+static_out = "admin-app/.next"
+framework  = "nextjs"
+
+[services.settings]
+cpu                = 0.02
+memory             = 0.05
+public_net         = true
+run_as_root        = false
+restart_policy     = "Always"
+deployment_timeout = 15
+
+  [[services.vars]]
+  key   = "NODE_ENV"
+  value = "production"
+
+  # NEXT_PUBLIC_API_URL must be set to the deployed backend public URL
+  # before building — it is baked into the static output at build time
+  [[services.vars]]
+  key   = "NEXT_PUBLIC_API_URL"
+  value = "https://qr-backend-826a2a8.mar-12-13c4381.clode.space"
+
+  [[services.settings.health_checks]]
+  path                  = "/"
+  port                  = 80
+  scheme                = "http"
+  initial_delay_seconds = 15
+  period_seconds        = 10
+
+  [[services.settings.regions]]
+  region   = "eu-west-2"
+  replicas = 1
