@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
+from flask_cors import CORS
 from models import db
 from config import config_map
 
@@ -15,6 +16,7 @@ def create_app(config_name: str = None) -> Flask:
     db.init_app(app)
     Migrate(app, db)
     JWTManager(app)
+    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
     # Blueprints
     from blueprints.auth import auth_bp
