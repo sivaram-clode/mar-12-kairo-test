@@ -1,206 +1,157 @@
-# aramb.toml — QR Code Platform Deployment Manifest
-# Application: mar-12 (ID: 13c43812-8669-4f0f-b805-f5b5b3c0845f)
-# Environment: production (ID: ba671758-b9a1-4608-92bf-2909b25ae4c9)
-# Generated: 2026-03-12
-
-[application]
-id   = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
-slug = "mar-12-13c4381"
-name = "mar-12"
-
-[environment]
-id   = "ba671758-b9a1-4608-92bf-2909b25ae4c9"
-slug = "production-ba67175"
-name = "production"
+# aramb.toml — QR Code Platform
+# Application ID: 13c43812-8669-4f0f-b805-f5b5b3c0845f
+# Mode: git-connected
+# Services: postgres-db, qr-backend (build+runtime), user-app (build+runtime), admin-app (build+runtime)
 
 # ─────────────────────────────────────────────
-# Service: PostgreSQL Database
+# 100: PostgreSQL Database (public image, no build service)
 # ─────────────────────────────────────────────
 [[services]]
-id          = "ec98a488-b8d1-4662-8112-f187b7d71186"
-slug        = "qr-database-ec98a48"
-name        = "qr-database"
-type        = "postgres"
-description = "PostgreSQL 15 database for the QR Code platform"
+uniqueIdentifier = 100
+name = "qr-postgres"
+type = "postgres"
+description = "PostgreSQL 15 database for QR platform"
+applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
 
-[services.settings]
-image              = "postgres:15-alpine"
-cpu                = 0.02
-memory             = 0.05
-public_net         = false
-run_as_root        = true
-restart_policy     = "Always"
-deployment_timeout = 15
+[services.configuration.settings]
+image = "postgres:15-alpine"
+commandPort = 5432
+publicNet = false
 
-  [[services.vars]]
-  key   = "POSTGRES_DB"
-  value = "mydb"
+[[services.configuration.vars]]
+key = "POSTGRES_DB"
+value = "qr_platform"
 
-  [[services.vars]]
-  key   = "POSTGRES_USER"
-  value = "postgres"
+[[services.configuration.vars]]
+key = "POSTGRES_USER"
+value = "postgres"
 
-  [[services.secrets]]
-  key   = "POSTGRES_PASSWORD"
-  value = "password"
-
-  [[services.settings.health_checks]]
-  port                  = 5432
-  initial_delay_seconds = 30
-  period_seconds        = 30
-
-  [[services.settings.regions]]
-  region   = "eu-west-2"
-  replicas = 1
+[[services.configuration.secrets]]
+key = "POSTGRES_PASSWORD"
+value = ""
 
 # ─────────────────────────────────────────────
-# Service: Flask Backend API
+# 101: Backend Build Service
 # ─────────────────────────────────────────────
 [[services]]
-id          = "826a2a8a-ba7b-4b4f-a020-24bd45df20f6"
-slug        = "qr-backend-826a2a8"
-name        = "qr-backend"
-type        = "backend"
-description = "Flask REST API — QR code generation, auth (JWT), stats"
+uniqueIdentifier = 101
+name = "qr-backend-build"
+type = "build"
+description = "Builds the Flask backend Docker image from backend/"
+applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
 
-# Build from: backend/
-# Runtime: gunicorn on port 8080
-# Dev port: 5000 (Flask default); production port: 8080 (gunicorn)
-[services.build]
-context    = "backend"
-dockerfile = "backend/Dockerfile"
-
-[services.settings]
-image              = "registry.clode.space/mar-12-13c4381/qr-backend-826a2a8:latest"
-cpu                = 0.05
-memory             = 0.1
-public_net         = true
-run_as_root        = false
-restart_policy     = "Always"
-deployment_timeout = 15
-
-  [[services.vars]]
-  key   = "PORT"
-  value = "8080"
-
-  [[services.vars]]
-  key   = "FLASK_ENV"
-  value = "production"
-
-  # DATABASE_URL references the internal hostname of the postgres service
-  # Format: postgresql://<user>:<pass>@<service-slug>:<port>/<db>
-  [[services.vars]]
-  key   = "DATABASE_URL"
-  value = "postgresql://postgres:password@qr-database-ec98a48:5432/mydb"
-
-  # ALLOWED_ORIGINS — set to deployed frontend URLs (updated after first deploy)
-  [[services.vars]]
-  key   = "ALLOWED_ORIGINS"
-  value = "https://qr-user-app-c7eacc3.mar-12-13c4381.clode.space,https://qr-admin-app-20b289c.mar-12-13c4381.clode.space"
-
-  [[services.secrets]]
-  key   = "JWT_SECRET_KEY"
-  value = "REPLACE_WITH_STRONG_SECRET"
-
-  [[services.settings.health_checks]]
-  path                  = "/health"
-  port                  = 8080
-  scheme                = "http"
-  initial_delay_seconds = 20
-  period_seconds        = 15
-
-  [[services.settings.regions]]
-  region   = "eu-west-2"
-  replicas = 1
+[services.configuration.settings]
+repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
+buildPath = "./backend"
+targetBranches = ["feature/qr-platform"]
 
 # ─────────────────────────────────────────────
-# Service: User Dashboard (Next.js)
+# 102: Backend Runtime Service
 # ─────────────────────────────────────────────
 [[services]]
-id          = "c7eacc34-74ce-407b-997d-cbad6b2886f4"
-slug        = "qr-user-app-c7eacc3"
-name        = "qr-user-app"
-type        = "frontend"
-description = "Next.js user dashboard — QR code management & analytics"
+uniqueIdentifier = 102
+name = "qr-backend"
+type = "backend"
+description = "Flask REST API — auth, QR CRUD, scan tracking, redirect"
+applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
 
-# Build from: user-app/
-# Dev port: 3000; production served via nginx on port 80
-[services.build]
-context    = "user-app"
-static_out = "user-app/.next"
-framework  = "nextjs"
+[services.configuration.settings]
+image = "${101.outputs.IMAGE_URL}"
+commandPort = 8080
+publicNet = true
 
-[services.settings]
-cpu                = 0.02
-memory             = 0.05
-public_net         = true
-run_as_root        = false
-restart_policy     = "Always"
-deployment_timeout = 15
+[[services.configuration.vars]]
+key = "PORT"
+value = "8080"
 
-  [[services.vars]]
-  key   = "NODE_ENV"
-  value = "production"
+[[services.configuration.vars]]
+key = "FLASK_ENV"
+value = "production"
 
-  # NEXT_PUBLIC_API_URL must be set to the deployed backend public URL
-  # before building — it is baked into the static output at build time
-  [[services.vars]]
-  key   = "NEXT_PUBLIC_API_URL"
-  value = "https://qr-backend-826a2a8.mar-12-13c4381.clode.space"
+[[services.configuration.vars]]
+key = "ALLOWED_ORIGINS"
+value = "${104.outputs.PUBLIC_URL},${106.outputs.PUBLIC_URL}"
 
-  [[services.settings.health_checks]]
-  path                  = "/"
-  port                  = 80
-  scheme                = "http"
-  initial_delay_seconds = 15
-  period_seconds        = 10
+[[services.configuration.secrets]]
+key = "DATABASE_URL"
+value = "postgresql://${100.vars.POSTGRES_USER}:${100.secrets.POSTGRES_PASSWORD}@${100.outputs.PRIVATE_URL}:5432/${100.vars.POSTGRES_DB}"
 
-  [[services.settings.regions]]
-  region   = "eu-west-2"
-  replicas = 1
+[[services.configuration.secrets]]
+key = "JWT_SECRET_KEY"
+value = ""
 
 # ─────────────────────────────────────────────
-# Service: Admin Dashboard (Next.js)
+# 103: User App Build Service
 # ─────────────────────────────────────────────
 [[services]]
-id          = "20b289c8-df4a-4e2f-87fa-e78a629e6796"
-slug        = "qr-admin-app-20b289c"
-name        = "qr-admin-app"
-type        = "frontend"
-description = "Next.js admin dashboard — user management & platform stats"
+uniqueIdentifier = 103
+name = "qr-user-app-build"
+type = "build"
+description = "Builds the user-facing Next.js dashboard Docker image from user-app/"
+applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
 
-# Build from: admin-app/
-# Dev port: 3001 (next dev -p 3001); production served via nginx on port 80
-[services.build]
-context    = "admin-app"
-static_out = "admin-app/.next"
-framework  = "nextjs"
+[services.configuration.settings]
+repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
+buildPath = "./user-app"
+targetBranches = ["feature/qr-platform"]
 
-[services.settings]
-cpu                = 0.02
-memory             = 0.05
-public_net         = true
-run_as_root        = false
-restart_policy     = "Always"
-deployment_timeout = 15
+# ─────────────────────────────────────────────
+# 104: User App Runtime Service
+# ─────────────────────────────────────────────
+[[services]]
+uniqueIdentifier = 104
+name = "qr-user-app"
+type = "backend"
+description = "Next.js user dashboard — QR creation, scan stats, dynamic URL editing"
+applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
 
-  [[services.vars]]
-  key   = "NODE_ENV"
-  value = "production"
+[services.configuration.settings]
+image = "${103.outputs.IMAGE_URL}"
+commandPort = 3000
+publicNet = true
 
-  # NEXT_PUBLIC_API_URL must be set to the deployed backend public URL
-  # before building — it is baked into the static output at build time
-  [[services.vars]]
-  key   = "NEXT_PUBLIC_API_URL"
-  value = "https://qr-backend-826a2a8.mar-12-13c4381.clode.space"
+[[services.configuration.vars]]
+key = "NEXT_PUBLIC_API_URL"
+value = "${102.outputs.PUBLIC_URL}"
 
-  [[services.settings.health_checks]]
-  path                  = "/"
-  port                  = 80
-  scheme                = "http"
-  initial_delay_seconds = 15
-  period_seconds        = 10
+[[services.configuration.vars]]
+key = "PORT"
+value = "3000"
 
-  [[services.settings.regions]]
-  region   = "eu-west-2"
-  replicas = 1
+# ─────────────────────────────────────────────
+# 105: Admin App Build Service
+# ─────────────────────────────────────────────
+[[services]]
+uniqueIdentifier = 105
+name = "qr-admin-app-build"
+type = "build"
+description = "Builds the admin Next.js dashboard Docker image from admin-app/"
+applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+
+[services.configuration.settings]
+repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
+buildPath = "./admin-app"
+targetBranches = ["feature/qr-platform"]
+
+# ─────────────────────────────────────────────
+# 106: Admin App Runtime Service
+# ─────────────────────────────────────────────
+[[services]]
+uniqueIdentifier = 106
+name = "qr-admin-app"
+type = "backend"
+description = "Next.js admin dashboard — user management, platform analytics"
+applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+
+[services.configuration.settings]
+image = "${105.outputs.IMAGE_URL}"
+commandPort = 3001
+publicNet = true
+
+[[services.configuration.vars]]
+key = "NEXT_PUBLIC_API_URL"
+value = "${102.outputs.PUBLIC_URL}"
+
+[[services.configuration.vars]]
+key = "PORT"
+value = "3001"
