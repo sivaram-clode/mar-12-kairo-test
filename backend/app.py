@@ -50,6 +50,10 @@ def create_app(config_name: str = None) -> Flask:
     qr_dir = os.path.join(app.root_path, app.config["QR_CODES_DIR"])
     os.makedirs(qr_dir, exist_ok=True)
 
+    # Auto-create tables in development (for SQLite)
+    with app.app_context():
+        db.create_all()
+
     @app.get("/health")
     def health():
         return {"status": "ok"}, 200
