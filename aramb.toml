@@ -1,157 +1,158 @@
-# aramb.toml — QR Code Platform
-# Application ID: 13c43812-8669-4f0f-b805-f5b5b3c0845f
-# Mode: git-connected
-# Services: postgres-db, qr-backend (build+runtime), user-app (build+runtime), admin-app (build+runtime)
-
-# ─────────────────────────────────────────────
-# 100: PostgreSQL Database (public image, no build service)
-# ─────────────────────────────────────────────
 [[services]]
-uniqueIdentifier = 100
-name = "qr-postgres"
-type = "postgres"
-description = "PostgreSQL 15 database for QR platform"
-applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  uniqueIdentifier = 100
+  name = "qr-postgres"
+  type = "postgres"
+  application = 0
+  description = "PostgreSQL 15 database for QR platform"
+  id = "a28051b8-5e77-4a78-af70-d200a1ba81ef"
+  slug = "qr-postgres-a28051b"
+  applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  [services.configuration]
+    [services.configuration.settings]
+      image = "postgres:15-alpine"
+      publicNet = false
+      commandPort = 5432
 
-[services.configuration.settings]
-image = "postgres:15-alpine"
-commandPort = 5432
-publicNet = false
+    [[services.configuration.vars]]
+      key = "POSTGRES_DB"
+      value = "qr_platform"
 
-[[services.configuration.vars]]
-key = "POSTGRES_DB"
-value = "qr_platform"
+    [[services.configuration.vars]]
+      key = "POSTGRES_USER"
+      value = "postgres"
 
-[[services.configuration.vars]]
-key = "POSTGRES_USER"
-value = "postgres"
+    [[services.configuration.secrets]]
+      key = "POSTGRES_PASSWORD"
+      value = "QkjUgNfZxbCSiG8tuqtdOxlzrQxYe70NoBVoeEtg"
 
-[[services.configuration.secrets]]
-key = "POSTGRES_PASSWORD"
-value = ""
-
-# ─────────────────────────────────────────────
-# 101: Backend Build Service
-# ─────────────────────────────────────────────
 [[services]]
-uniqueIdentifier = 101
-name = "qr-backend-build"
-type = "build"
-description = "Builds the Flask backend Docker image from backend/"
-applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  uniqueIdentifier = 101
+  name = "qr-backend-build"
+  type = "build"
+  application = 0
+  description = "Builds the Flask backend Docker image from backend/"
+  id = "b8ba3df9-f252-4b8c-8805-e4ebc5ea0727"
+  slug = "qr-backend-build-b8ba3df"
+  applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  [services.configuration]
+    [services.configuration.settings]
+      repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
+      buildPath = "./backend"
+      privateBuild = true
+      targetBranches = ["feature/qr-platform"]
+      installationId = "100292425"
 
-[services.configuration.settings]
-repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
-buildPath = "./backend"
-targetBranches = ["feature/qr-platform"]
-
-# ─────────────────────────────────────────────
-# 102: Backend Runtime Service
-# ─────────────────────────────────────────────
 [[services]]
-uniqueIdentifier = 102
-name = "qr-backend"
-type = "backend"
-description = "Flask REST API — auth, QR CRUD, scan tracking, redirect"
-applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  uniqueIdentifier = 102
+  name = "qr-backend"
+  type = "backend"
+  application = 0
+  description = "Flask REST API — auth, QR CRUD, scan tracking, redirect"
+  id = "30539747-3a56-4a1f-9ba6-279aa0f2c266"
+  slug = "qr-backend-3053974"
+  applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  [services.configuration]
+    [services.configuration.settings]
+      image = "${b8ba3df9-f252-4b8c-8805-e4ebc5ea0727.outputs.IMAGE_URL}"
+      publicNet = true
+      commandPort = 8080
 
-[services.configuration.settings]
-image = "${101.outputs.IMAGE_URL}"
-commandPort = 8080
-publicNet = true
+    [[services.configuration.vars]]
+      key = "PORT"
+      value = "8080"
 
-[[services.configuration.vars]]
-key = "PORT"
-value = "8080"
+    [[services.configuration.vars]]
+      key = "FLASK_ENV"
+      value = "production"
 
-[[services.configuration.vars]]
-key = "FLASK_ENV"
-value = "production"
+    [[services.configuration.vars]]
+      key = "ALLOWED_ORIGINS"
+      value = "*"
 
-[[services.configuration.vars]]
-key = "ALLOWED_ORIGINS"
-value = "${104.outputs.PUBLIC_URL},${106.outputs.PUBLIC_URL}"
+    [[services.configuration.secrets]]
+      key = "DATABASE_URL"
+      value = "postgresql://${a28051b8-5e77-4a78-af70-d200a1ba81ef.vars.POSTGRES_USER}:${a28051b8-5e77-4a78-af70-d200a1ba81ef.secrets.POSTGRES_PASSWORD}@${a28051b8-5e77-4a78-af70-d200a1ba81ef.outputs.PRIVATE_URL}:5432/${a28051b8-5e77-4a78-af70-d200a1ba81ef.vars.POSTGRES_DB}"
 
-[[services.configuration.secrets]]
-key = "DATABASE_URL"
-value = "postgresql://${100.vars.POSTGRES_USER}:${100.secrets.POSTGRES_PASSWORD}@${100.outputs.PRIVATE_URL}:5432/${100.vars.POSTGRES_DB}"
+    [[services.configuration.secrets]]
+      key = "JWT_SECRET_KEY"
+      value = "5d86d0740b6fbc29e9d7f3f8747adcff91a1e8f8ae8075580302e6aeac1a614f"
 
-[[services.configuration.secrets]]
-key = "JWT_SECRET_KEY"
-value = ""
-
-# ─────────────────────────────────────────────
-# 103: User App Build Service
-# ─────────────────────────────────────────────
 [[services]]
-uniqueIdentifier = 103
-name = "qr-user-app-build"
-type = "build"
-description = "Builds the user-facing Next.js dashboard Docker image from user-app/"
-applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  uniqueIdentifier = 103
+  name = "qr-user-app-build"
+  type = "build"
+  application = 0
+  description = "Builds the user-facing Next.js dashboard Docker image from user-app/"
+  id = "1eb2aafe-14ad-483a-8024-bd7eeb654d9a"
+  slug = "qr-user-app-build-1eb2aaf"
+  applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  [services.configuration]
+    [services.configuration.settings]
+      repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
+      buildPath = "./user-app"
+      privateBuild = true
+      targetBranches = ["feature/qr-platform"]
+      installationId = "100292425"
 
-[services.configuration.settings]
-repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
-buildPath = "./user-app"
-targetBranches = ["feature/qr-platform"]
-
-# ─────────────────────────────────────────────
-# 104: User App Runtime Service
-# ─────────────────────────────────────────────
 [[services]]
-uniqueIdentifier = 104
-name = "qr-user-app"
-type = "backend"
-description = "Next.js user dashboard — QR creation, scan stats, dynamic URL editing"
-applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  uniqueIdentifier = 104
+  name = "qr-user-app"
+  type = "backend"
+  application = 0
+  description = "Next.js user dashboard — QR creation, scan stats, dynamic URL editing"
+  id = "6c1f6e59-a5dd-4499-a8d7-e1c72c02e72f"
+  slug = "qr-user-app-6c1f6e5"
+  applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  [services.configuration]
+    [services.configuration.settings]
+      image = "${1eb2aafe-14ad-483a-8024-bd7eeb654d9a.outputs.IMAGE_URL}"
+      publicNet = true
+      commandPort = 3000
 
-[services.configuration.settings]
-image = "${103.outputs.IMAGE_URL}"
-commandPort = 3000
-publicNet = true
+    [[services.configuration.vars]]
+      key = "NEXT_PUBLIC_API_URL"
+      value = "${30539747-3a56-4a1f-9ba6-279aa0f2c266.outputs.PUBLIC_URL}"
 
-[[services.configuration.vars]]
-key = "NEXT_PUBLIC_API_URL"
-value = "${102.outputs.PUBLIC_URL}"
+    [[services.configuration.vars]]
+      key = "PORT"
+      value = "3000"
 
-[[services.configuration.vars]]
-key = "PORT"
-value = "3000"
-
-# ─────────────────────────────────────────────
-# 105: Admin App Build Service
-# ─────────────────────────────────────────────
 [[services]]
-uniqueIdentifier = 105
-name = "qr-admin-app-build"
-type = "build"
-description = "Builds the admin Next.js dashboard Docker image from admin-app/"
-applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  uniqueIdentifier = 105
+  name = "qr-admin-app-build"
+  type = "build"
+  application = 0
+  description = "Builds the admin Next.js dashboard Docker image from admin-app/"
+  id = "075ea199-360d-4fa3-b34a-78122ef6e5a0"
+  slug = "qr-admin-app-build-075ea19"
+  applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  [services.configuration]
+    [services.configuration.settings]
+      repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
+      buildPath = "./admin-app"
+      privateBuild = true
+      targetBranches = ["feature/qr-platform"]
+      installationId = "100292425"
 
-[services.configuration.settings]
-repoUrl = "https://github.com/sivaram-clode/mar-12-kairo-test"
-buildPath = "./admin-app"
-targetBranches = ["feature/qr-platform"]
-
-# ─────────────────────────────────────────────
-# 106: Admin App Runtime Service
-# ─────────────────────────────────────────────
 [[services]]
-uniqueIdentifier = 106
-name = "qr-admin-app"
-type = "backend"
-description = "Next.js admin dashboard — user management, platform analytics"
-applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  uniqueIdentifier = 106
+  name = "qr-admin-app"
+  type = "backend"
+  application = 0
+  description = "Next.js admin dashboard — user management, platform analytics"
+  id = "fbe698fa-c4b1-410f-ae0d-e87b982c6a0e"
+  slug = "qr-admin-app-fbe698f"
+  applicationId = "13c43812-8669-4f0f-b805-f5b5b3c0845f"
+  [services.configuration]
+    [services.configuration.settings]
+      image = "${075ea199-360d-4fa3-b34a-78122ef6e5a0.outputs.IMAGE_URL}"
+      publicNet = true
+      commandPort = 3001
 
-[services.configuration.settings]
-image = "${105.outputs.IMAGE_URL}"
-commandPort = 3001
-publicNet = true
+    [[services.configuration.vars]]
+      key = "NEXT_PUBLIC_API_URL"
+      value = "${30539747-3a56-4a1f-9ba6-279aa0f2c266.outputs.PUBLIC_URL}"
 
-[[services.configuration.vars]]
-key = "NEXT_PUBLIC_API_URL"
-value = "${102.outputs.PUBLIC_URL}"
-
-[[services.configuration.vars]]
-key = "PORT"
-value = "3001"
+    [[services.configuration.vars]]
+      key = "PORT"
+      value = "3001"
