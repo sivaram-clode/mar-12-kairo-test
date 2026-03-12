@@ -12,13 +12,18 @@ def create_app(config_name: str = None) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_map.get(config_name, config_map["development"]))
 
+    # Build allowed origins from ALLOWED_ORIGINS env var (comma-separated)
+    # e.g. ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://your-tunnel.trycloudflare.com
+    raw_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001")
+    allowed_origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+
     # Extensions
     db.init_app(app)
     Migrate(app, db)
     JWTManager(app)
     CORS(
         app,
-        resources={r"/*": {"origins": "*"}},
+        resources={r"/*": {"origins": allowed_origins}},
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
@@ -28,11 +33,14 @@ def create_app(config_name: str = None) -> Flask:
     def handle_preflight():
         from flask import request, make_response
         if request.method == "OPTIONS":
+            origin = request.headers.get("Origin", "")
             res = make_response()
-            res.headers["Access-Control-Allow-Origin"] = "*"
+            if origin in allowed_origins:
+                res.headers["Access-Control-Allow-Origin"] = origin
             res.headers["Access-Control-Allow-Methods"] = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
             res.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
             res.headers["Access-Control-Max-Age"] = "3600"
+            res.headers["Vary"] = "Origin"
             return res, 204
 
     # Blueprints
