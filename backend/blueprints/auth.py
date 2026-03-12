@@ -64,7 +64,9 @@ def login():
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()
 def me():
-    user = User.query.get(int(get_jwt_identity()))
+    user = db.session.get(User, int(get_jwt_identity()))
+    if user is None:
+        return jsonify({"error": "user not found", "code": 404}), 404
     if not user:
         return jsonify({"error": "user not found"}), 404
     return jsonify(user.to_dict()), 200

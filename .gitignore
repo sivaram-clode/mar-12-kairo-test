@@ -1,14 +1,12 @@
-
-# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.egg
+*.py[cod]
 *.egg-info/
-dist/
-build/
-instance/
+.venv/
+venv/
 *.db
+backend/dev.db
+backend/static/qrcodes/*.png
+/tmp/test_qrcodes/
 .env
+*.pyc
+.pytest_cache/
