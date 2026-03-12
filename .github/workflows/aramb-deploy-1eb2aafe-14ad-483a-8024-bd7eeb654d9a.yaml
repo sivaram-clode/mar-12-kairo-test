@@ -1,0 +1,37 @@
+name: Deploy with Aramb
+
+on:
+  push:
+    branches:
+      - feature/qr-platform
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  aramb-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Github tag
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Setup aramb
+        uses: aramb-ai/aramb-setup@v0.0.2-beta1
+
+      - name: Build and push
+        timeout-minutes: 30
+        run: aramb build --tag ${{ steps.vars.outputs.sha_short }}
+        env:
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_REPOSITORY: ${{ github.repository }}
+          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          ARAMB_SERVICE_ID: 1eb2aafe-14ad-483a-8024-bd7eeb654d9a
+          ARAMB_API_URL: https://api.clode.space/jumbo
+          ARAMB_API_TOKEN: ${{ secrets.ARAMB_API_TOKEN }}
